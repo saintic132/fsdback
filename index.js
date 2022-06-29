@@ -3,11 +3,12 @@ const socketio = require('socket.io')
 const http = require('http')
 const cors = require('cors')
 
-setInterval(function() {
-    http.get('https://seobilityback.herokuapp.com/');
+setInterval(function () {
+    http.get('http://fsdback.herokuapp.com/');
 }, 300000);
 
 const {addUser, returnChat, getUser, removeUser} = require('./chat')
+const {v1} = require("uuid");
 
 const app = express();
 const server = http.createServer(app);
@@ -23,26 +24,38 @@ app.use(cors())
 
 io.on('connection', (socketChannel) => {
     socketChannel.on('join', (name, cb) => {
-        const userId = addUser(name, socketChannel.id)
-        const chat = returnChat()
-        socketChannel.emit('self-user-data', {userId, userName: name})
-        socketChannel.emit('other-user-in-chat', chat)
-        socketChannel.broadcast.emit('new-user-join', {userId, userName: name})
+        if (name) {
+            const userId = addUser(name, socketChannel.id)
+            const chat = returnChat()
+            socketChannel.emit('self-user-data', {userId, userName: name})
+            socketChannel.emit('other-user-in-chat', chat)
+            socketChannel.broadcast.emit('new-user-join', {userId, userName: name})
+        }
+
         cb()
     })
 
     socketChannel.on('client-new-message-sent', ({id, message}, cb) => {
-        let userData = getUser(id)
-        let time = new Date().toLocaleTimeString('ru-RU', {hour: 'numeric', minute: 'numeric'})
-        let randomId = v1()
-        let newMessage = {userId: id, messageId: randomId, userName: userData.userName, message, time}
-        io.emit('new-message-sent', newMessage)
+        if (id) {
+            let userData = getUser(id)
+            let time = new Date().toLocaleTimeString('ru-RU', {hour: 'numeric', minute: 'numeric'})
+            let randomId = v1()
+            if (userData) {
+                let newMessage = {userId: id, messageId: randomId, userName: userData.userName, message, time}
+                io.emit('new-message-sent', newMessage)
+            }
+        }
         cb()
     })
 
     socketChannel.on('disconnect', () => {
-        removeUser(socketChannel.id)
-        io.emit('user-left-from-chat', socketChannel.id)
+        if (socketChannel.id) {
+            let userData = getUser(socketChannel.id)
+            removeUser(socketChannel.id)
+            if (userData) {
+                io.emit('user-left-from-chat', userData)
+            }
+        }
     })
 })
 
