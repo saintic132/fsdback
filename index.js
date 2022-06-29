@@ -3,6 +3,10 @@ const socketio = require('socket.io')
 const http = require('http')
 const cors = require('cors')
 
+setInterval(function() {
+    http.get('https://seobilityback.herokuapp.com/');
+}, 300000);
+
 const {addUser, returnChat, getUser, removeUser} = require('./chat')
 
 const app = express();
