@@ -3,7 +3,7 @@ const socketio = require('socket.io')
 const http = require('http')
 const cors = require('cors')
 
-const {addUser, getUser, removeUser} = require('./chat')
+const {addUser, returnChat, getUser, removeUser} = require('./chat')
 const {v1} = require("uuid");
 
 const app = express();
@@ -19,32 +19,27 @@ const PORT = process.env.PORT || 5000
 app.use(cors())
 
 io.on('connection', (socketChannel) => {
-
-    console.log('User connection')
-
-    socketChannel.on('client-new-message-sent', ({id, message}, cb) => {
-        let time = new Date().toLocaleTimeString('ru-RU', {hour: 'numeric', minute: 'numeric'});
-        let randomId = v1()
-        let newMessage = {id, messageId: randomId, name: 'Patrick', message, time}
-        io.emit('new-message-sent', newMessage)
-
+    socketChannel.on('join', (name, cb) => {
+        const userId = addUser(name, socketChannel.id)
+        const chat = returnChat()
+        socketChannel.emit('self-user-data', {userId, userName: name})
+        socketChannel.emit('other-user-in-chat', chat)
+        socketChannel.broadcast.emit('new-user-join', {userId, userName: name})
         cb()
     })
 
-    // socketChannel.on('join', (name, cb) => {
-    //     const id = addUser(name)
-    //     console.log(id)
-    //
-    //     socketChannel.emit('message', {id, text: `${name}, welcome to chat !`})
-    //     socketChannel.emit('message', {user: name, text: `${name}, has joined!`})
-    //
-    //     cb()
-    // })
+    socketChannel.on('client-new-message-sent', ({id, message}, cb) => {
+        let userData = getUser(id)
+        let time = new Date().toLocaleTimeString('ru-RU', {hour: 'numeric', minute: 'numeric'})
+        let randomId = v1()
+        let newMessage = {userId: id, messageId: randomId, userName: userData.userName, message, time}
+        io.emit('new-message-sent', newMessage)
+        cb()
+    })
 
-
-
-    socketChannel.on('disconnect', ({name}) => {
-        console.log('User left')
+    socketChannel.on('disconnect', () => {
+        removeUser(socketChannel.id)
+        io.emit('user-left-from-chat', socketChannel.id)
     })
 })
 
