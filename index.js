@@ -4,7 +4,6 @@ const http = require('http')
 const cors = require('cors')
 
 const {addUser, returnChat, getUser, removeUser} = require('./chat')
-const {v1} = require("uuid");
 
 const app = express();
 const server = http.createServer(app);
