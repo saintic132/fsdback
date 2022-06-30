@@ -5,7 +5,7 @@ const cors = require('cors')
 
 setInterval(function () {
     http.get('http://fsdback.herokuapp.com/');
-}, 300000);
+}, 600000);
 
 const {addUser, returnChat, getUser, removeUser} = require('./chat')
 const {v1} = require("uuid");
@@ -30,22 +30,21 @@ io.on('connection', (socketChannel) => {
             socketChannel.emit('self-user-data', {userId, userName: name})
             socketChannel.emit('other-user-in-chat', chat)
             socketChannel.broadcast.emit('new-user-join', {userId, userName: name})
+            cb()
         }
-
-        cb()
     })
 
-    socketChannel.on('client-new-message-sent', ({id, message}, cb) => {
-        if (id) {
-            let userData = getUser(id)
+    socketChannel.on('client-new-message-sent', ({userId, message}, cb) => {
+        if (userId) {
+            let userData = getUser(userId)
             let time = new Date().toLocaleTimeString('ru-RU', {hour: 'numeric', minute: 'numeric'})
             let randomId = v1()
             if (userData) {
-                let newMessage = {userId: id, messageId: randomId, userName: userData.userName, message, time}
+                let newMessage = {userId, messageId: randomId, userName: userData.userName, message, time}
                 io.emit('new-message-sent', newMessage)
+                cb()
             }
         }
-        cb()
     })
 
     socketChannel.on('disconnect', () => {
